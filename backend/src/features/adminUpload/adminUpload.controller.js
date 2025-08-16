@@ -79,4 +79,33 @@ export class AdminUploadController {
       uploadedBy: fileObj.uploadedBy,
     });
   }
+
+  async deleteUpload(req, res) {
+  try {
+    const { fileName } = req.params;
+    if (!fileName) {
+      return res.status(400).json({ message: "File name is required" });
+    }
+
+    // Find the file in DB
+    const file = await AdminUploadModel.findOne({ fileName });
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Delete the physical file from uploads folder
+    if (fs.existsSync(file.filePath)) {
+      fs.unlinkSync(file.filePath);
+    }
+
+    // Delete from DB
+    await AdminUploadModel.deleteOne({ fileName });
+
+    res.json({ message: "File deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting file:", err);
+    res.status(500).json({ message: "Error deleting file", error: err.message });
+  }
+}
+
 }

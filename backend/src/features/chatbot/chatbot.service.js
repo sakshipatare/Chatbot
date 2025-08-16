@@ -5,50 +5,59 @@
 // const uploadsDir = path.join(process.cwd(), "uploads");
 
 // class ChatbotService {
-//   static async extractTextFromExistingDoc(filename) {
+//   // Get text from all documents in uploads folder
+//   static async extractTextFromAllDocs() {
 //     try {
-//       const filePath = path.join(uploadsDir, filename);
-
-//       if (!fs.existsSync(filePath)) {
-//         throw new Error("File not found in uploads folder");
+//       const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith(".docx"));
+//       if (files.length === 0) {
+//         throw new Error("No .docx files found in uploads folder");
 //       }
 
-//       const { value: text } = await mammoth.extractRawText({ path: filePath });
-//       return text.trim();
+//       let allText = "";
+//       for (const file of files) {
+//         const filePath = path.join(uploadsDir, file);
+//         const { value: text } = await mammoth.extractRawText({ path: filePath });
+//         allText += `\n\n[Document: ${file}]\n${text.trim()}`;
+//       }
+//       return allText.trim();
 //     } catch (err) {
-//       throw new Error("Error reading .docx file: " + err.message);
+//       throw new Error("Error reading documents: " + err.message);
 //     }
 //   }
 
 //   static async answerQuestion(text, question) {
-//     try {
-//       // Lazy-load OpenAI so it uses the API key after dotenv is loaded
-//       const OpenAI = (await import("openai")).default;
-//       const openai = new OpenAI({
-//         apiKey: process.env.OPENAI_API_KEY
-//       });
+//     const { GoogleGenerativeAI } = await import("@google/generative-ai");
+//     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+//     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-//       const prompt = `
-// You are a helpful assistant. 
-// Answer the question using only the information from the following document: 
+//     const prompt = `
+// You are a helpful assistant.
+// Answer the question using only the information from the following documents:
 
-// Document:
 // ${text}
 
 // Question:
 // ${question}
-//       `;
+//     `;
 
-//       const completion = await openai.chat.completions.create({
-//         model: "gpt-4o-mini",
-//         messages: [{ role: "user", content: prompt }],
-//       });
-
-//       return completion.choices[0].message.content.trim();
-//     } catch (err) {
-//       console.error("AI answer error:", err.message);
-//       return "Sorry, I couldn't find an answer.";
+//     async function tryRequest(attempt = 1) {
+//       try {
+//         const result = await model.generateContent(prompt);
+//         return result.response.text().trim();
+//       } catch (err) {
+//         // Check for 503 error
+//         if (err.message.includes("503") && attempt < 3) {
+//           const delay = attempt * 2000; // exponential backoff: 2s, 4s, ...
+//           console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
+//           await new Promise(res => setTimeout(res, delay));
+//           return tryRequest(attempt + 1);
+//         }
+//         console.error("AI answer error:", err.message);
+//         return "AI service is temporarily unavailable. Please try again later.";
+//       }
 //     }
+
+//     return tryRequest();
 //   }
 // }
 
@@ -62,84 +71,68 @@ import mammoth from "mammoth";
 const uploadsDir = path.join(process.cwd(), "uploads");
 
 class ChatbotService {
-  static async extractTextFromExistingDoc(filename) {
+  // Extract text + URLs (preserve hyperlinks) from all .docx documents
+  static async extractTextFromAllDocs() {
     try {
-      const filePath = path.join(uploadsDir, filename);
-
-      if (!fs.existsSync(filePath)) {
-        throw new Error("File not found in uploads folder");
+      const files = fs.readdirSync(uploadsDir).filter(f => f.endsWith(".docx"));
+      if (files.length === 0) {
+        throw new Error("No .docx files found in uploads folder");
       }
 
-      const { value: text } = await mammoth.extractRawText({ path: filePath });
-      return text.trim();
+      let allText = "";
+      for (const file of files) {
+        const filePath = path.join(uploadsDir, file);
+
+        // Convert docx to HTML instead of plain text to preserve links
+        const { value: html } = await mammoth.convertToHtml({ path: filePath });
+
+        // Replace <a href="..."> with just the URL itself so Gemini can use it
+        const cleanText = html
+          .replace(/<a[^>]*href="([^"]+)"[^>]*>.*?<\/a>/gi, "$1")
+          .replace(/<\/?[^>]+(>|$)/g, ""); // remove other html tags
+
+        allText += `\n\n[Document: ${file}]\n${cleanText.trim()}`;
+      }
+
+      return allText.trim();
     } catch (err) {
-      throw new Error("Error reading .docx file: " + err.message);
+      throw new Error("Error reading documents: " + err.message);
     }
   }
 
   static async answerQuestion(text, question) {
-//     const mockResponses = [
-//       `Based on the provided document, the answer to your question "${question}" could be inferred as follows: ...`,
-//       `After analyzing the document, here's what I think: ...`,
-//       `From the text in the document, the relevant detail for "${question}" seems to be ...`,
-//       `The document mentions some information related to "${question}", here’s a summary: ...`,
-//       `Looking through the document, it appears that the answer might be ...`
-//     ];
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-//     try {
-//       // Lazy-load OpenAI so it uses the API key after dotenv is loaded
-//       const OpenAI = (await import("openai")).default;
-//       const openai = new OpenAI({
-//         apiKey: process.env.OPENAI_API_KEY
-//       });
-
-//       const prompt = `
-// You are a helpful assistant. 
-// Answer the question using only the information from the following document: 
-
-// Document:
-// ${text}
-
-// Question:
-// ${question}
-//       `;
-
-//       const completion = await openai.chat.completions.create({
-//         model: "gpt-4o-mini",
-//         messages: [{ role: "user", content: prompt }],
-//       });
-
-//       return completion.choices[0].message.content.trim();
-//     } catch (err) {
-//       console.error("AI answer error:", err.message);
-//       // Return a random mock response for testing
-//       return mockResponses[Math.floor(Math.random() * mockResponses.length)];
-
-try {
-      // Import Gemini API
-      const { GoogleGenerativeAI } = await import("@google/generative-ai");
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      const prompt = `
+    const prompt = `
 You are a helpful assistant.
-Answer the question using only the information from the following document:
+Answer the question using only the information from the following documents.
+If an image URL is given, include it in your answer clearly.
 
-Document:
 ${text}
 
 Question:
 ${question}
-      `;
+    `;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
-
-    } catch (err) {
-      console.error("AI answer error:", err.message);
-      return "Sorry, I couldn't find an answer.";
+    async function tryRequest(attempt = 1) {
+      try {
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim();
+      } catch (err) {
+        if (err.message.includes("503") && attempt < 3) {
+          const delay = attempt * 2000;
+          console.warn(`Gemini API overloaded. Retrying in ${delay / 1000}s...`);
+          await new Promise(res => setTimeout(res, delay));
+          return tryRequest(attempt + 1);
+        }
+        console.error("AI answer error:", err.message);
+        return "AI service is temporarily unavailable. Please try again later.";
+      }
     }
+
+    return tryRequest();
   }
 }
 

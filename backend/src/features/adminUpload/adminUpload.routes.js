@@ -54,5 +54,12 @@ router.post("/upload", authMiddleware, upload.array("files", 10), async (req, re
 
 router.get("/uploads", authMiddleware, controller.getUploads);
 router.get("/search", authMiddleware, controller.searchUploads);
+// Add delete route
+router.delete("/delete/:fileName", authMiddleware, (req, res) =>
+  controller.deleteUpload(req, res)
+);
+
+
+
 
 export default router;
