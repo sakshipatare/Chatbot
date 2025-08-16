@@ -86,29 +86,32 @@ EMAIL_PASS=your_email_password
 GOOGLE_API_KEY=your_generative_ai_key
 
 ## 🧑‍💻 Tools Used
+
 ⚛️ React.js
+
 🎨 Tailwind CSS
+
 🟢 Node.js & Express.js
+
 🍃 MongoDB
+
 🔐 JWT & Bcrypt.js
+
 📧 Nodemailer
+
 📂 Multer
+
 🤖 Google Generative AI (Gemini)
+
 🎯 Future Enhancements
+
 👥 Role-based access (Admin, User)
+
 ⚡ Real-time chat with WebSockets
+
 📝 Support more file formats
+
 📊 Analytics for uploaded documents
 
 ## ✨ Built with ❤️ by Sakshi Patare
-
-
----
-
-This will give you:  
-✅ Clean headings  
-✅ Emojis for readability  
-✅ Badges for repo stats  
-✅ Tables for tech stack  
-
 
