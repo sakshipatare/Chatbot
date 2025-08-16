@@ -65,25 +65,30 @@ It ensures **secure user access**, easy **document handling**, and an **interact
 
 ---
 ## 📦 Installation & Setup  
-2️⃣ Backend setup
+### 2️⃣ Backend setup
+```bash
 cd backend
 npm install
 npm start
+```
 
-3️⃣ Frontend setup
+### 3️⃣ Frontend setup
+```bash
 cd frontend
 npm install
 npm start
+```
 
-4️⃣ Environment Variables
+### 4️⃣ Environment Variables
 
 Create .env in backend/
-
+```env
 MONGO_URI=your_mongo_connection
 JWT_SECRET=your_secret_key
 EMAIL_USER=your_email
 EMAIL_PASS=your_email_password
-GOOGLE_API_KEY=your_generative_ai_key
+GOOGLE_API_KEY=your_generative_ai_key 
+```
 
 ## 🧑‍💻 Tools Used
 
